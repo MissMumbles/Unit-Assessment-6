@@ -1,6 +1,6 @@
 const express = require('express')
 const cors=require('cors')
-// const path = require('path')
+const path = require('path')
 const app = express()
 
 const {bots, playerRecord} = require('./data')
@@ -9,11 +9,28 @@ const {shuffleArray} = require('./utils')
 app.use(express.json());
 app.use(cors());
 
+// http://localhost:3000/
+
+// include and initialize the rollbar library with your access token
+var Rollbar = require('rollbar')
+var rollbar = new Rollbar({
+  accessToken: '6dc002a944824fd69487df94fca29ee0',
+  captureUncaught: true,
+  captureUnhandledRejections: true,
+})
+
+// record a generic message and send it to Rollbar
+rollbar.log('Hello world!')
 
 
+app.get('/', (req, res) => {
+    rollbar.info('html served successfully ')
+    res.sendFile(path.join(__dirname, '/public/index.html'))
+})
 
 app.get('/api/robots', (req, res) => {
     try {
+        rollbar.info('user got all robots')
         res.status(200).send(bots)
     } catch (error) {
         console.log('ERROR GETTING BOTS', error)
@@ -26,6 +43,7 @@ app.get('/api/robots/five', (req, res) => {
         let shuffled = shuffleArray(bots)
         let choices = shuffled.slice(0, 5)
         let compDuo = shuffled.slice(6, 8)
+        rollbar.info('someone drew 5 shuffled cards')
         res.status(200).send({choices, compDuo})
     } catch (error) {
         console.log('ERROR GETTING FIVE BOTS', error)
@@ -53,9 +71,11 @@ app.post('/api/duel', (req, res) => {
         // comparing the total health to determine a winner
         if (compHealthAfterAttack > playerHealthAfterAttack) {
             playerRecord.losses++
+            rollbar.info('user lost')
             res.status(200).send('You lost!')
         } else {
-            playerRecord.losses++
+            playerRecord.wins++
+            rollbar.info('user won')
             res.status(200).send('You won!')
         }
     } catch (error) {
@@ -66,6 +86,7 @@ app.post('/api/duel', (req, res) => {
 
 app.get('/api/player', (req, res) => {
     try {
+        rollbar.info('user stats updated')
         res.status(200).send(playerRecord)
     } catch (error) {
         console.log('ERROR GETTING PLAYER STATS', error)
